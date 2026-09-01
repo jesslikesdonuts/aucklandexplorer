@@ -116,8 +116,14 @@ document.addEventListener("click", (event) => {
 });
 
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") {
+  if (event.key !== "Escape") return;
+  // Close only the innermost open thing on each Escape press: an open
+  // dropdown first, and only the place modal once no dropdown is open —
+  // otherwise one Escape press would close both at the same time.
+  if (openDropdowns.size > 0) {
     for (const dropdown of openDropdowns) dropdown.close();
+  } else if (!placeModal.hidden) {
+    closePlaceModal();
   }
 });
 
@@ -362,10 +368,11 @@ function createMultiSelectDropdown({ containerEl, placeholderText, onChange }) {
     } else if ((event.key === "Enter" || event.key === " ") && !menuEl.hidden) {
       event.preventDefault();
       if (activeIndex >= 0) dropdown.toggleValue(optionValues[activeIndex]);
-    } else if (event.key === "Escape" && !menuEl.hidden) {
-      event.preventDefault();
-      dropdown.close();
     }
+    // Escape is handled by a single global listener (see openDropdowns
+    // below) rather than here, so it can't also close whatever else Escape
+    // might otherwise be about to close in the same keypress (e.g. the
+    // place-details modal this dropdown lives inside).
   });
 
   updateLabel();
@@ -890,6 +897,14 @@ function closePlaceModal() {
 }
 
 modalCancelBtn.addEventListener("click", closePlaceModal);
+document.getElementById("modal-close-btn").addEventListener("click", closePlaceModal);
+
+// Clicking the greyed-out backdrop closes the modal, but only when the
+// click actually landed on the backdrop itself — not when it started
+// inside the modal and just bubbled up here.
+placeModal.addEventListener("click", (event) => {
+  if (event.target === placeModal) closePlaceModal();
+});
 
 modalClearBtn.addEventListener("click", () => {
   modalLocation = null;
