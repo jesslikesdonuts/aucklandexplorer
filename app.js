@@ -181,11 +181,26 @@ const filterCategoryDropdown = createDropdown({
   onChange: render,
 });
 
+const sortDropdown = createDropdown({
+  containerEl: document.getElementById("sort-dropdown"),
+  onChange: render,
+});
+
 function populateCategoryOptions() {
   const categoryOptions = CATEGORIES.map((category) => ({ value: category, label: category }));
   categoryDropdown.setOptions(categoryOptions);
   filterCategoryDropdown.setOptions([{ value: "", label: "All categories" }, ...categoryOptions]);
   filterCategoryDropdown.select("", { silent: true });
+}
+
+function populateSortOptions() {
+  sortDropdown.setOptions([
+    { value: "suburb", label: "Suburb (A–Z)" },
+    { value: "name", label: "Name (A–Z)" },
+    { value: "category", label: "Category (A–Z)" },
+    { value: "newest", label: "Newest first" },
+  ]);
+  sortDropdown.select("suburb", { silent: true });
 }
 
 function refreshSuburbControls() {
@@ -208,10 +223,23 @@ function getFilteredPlaces() {
   const suburbFilter = filterSuburbDropdown.value;
   const categoryFilter = filterCategoryDropdown.value;
 
-  return places
+  const filtered = places
     .filter((p) => !suburbFilter || p.suburb === suburbFilter)
-    .filter((p) => !categoryFilter || p.category === categoryFilter)
-    .sort((a, b) => a.suburb.localeCompare(b.suburb) || a.name.localeCompare(b.name));
+    .filter((p) => !categoryFilter || p.category === categoryFilter);
+
+  switch (sortDropdown.value) {
+    case "name":
+      return filtered.sort((a, b) => a.name.localeCompare(b.name));
+    case "category":
+      return filtered.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+    case "newest":
+      // Places are always added to the end of the list, so the existing
+      // order is already oldest-to-newest — reversing it is enough.
+      return filtered.reverse();
+    case "suburb":
+    default:
+      return filtered.sort((a, b) => a.suburb.localeCompare(b.suburb) || a.name.localeCompare(b.name));
+  }
 }
 
 function render() {
@@ -699,6 +727,7 @@ function buildPopupContent(place) {
 }
 
 populateCategoryOptions();
+populateSortOptions();
 populateMapLegend();
 refreshSuburbControls();
 render();

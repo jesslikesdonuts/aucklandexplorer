@@ -61,7 +61,9 @@ npx serve
   automatically with the suburbs you've used, and you'll get autocomplete suggestions
   when typing.
 - Categories are fixed: Breakfast/Brunch, Coffee, Bakery, Lunch, Dinner, Bar, Activities.
-- Use the two dropdowns under "Browse places" to filter by suburb and/or category.
+- Use the Suburb and Category dropdowns under "Browse places" to filter the list, and
+  the Sort by dropdown to order it — by Suburb, Name, Category, or Newest first (most
+  recently added first).
 - Each place has a **Delete** button if you want to remove it.
 - When adding a place, you can optionally type a street or place name into the search
   box above the map and pick a result to jump the map there and drop a pin — or just
