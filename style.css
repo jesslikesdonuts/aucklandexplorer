@@ -329,7 +329,7 @@ button:hover {
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  z-index: 100;
+  z-index: 2000;
 }
 
 .modal-overlay[hidden] {
@@ -446,7 +446,9 @@ button:hover {
   padding: 0.3rem 0;
   max-height: 220px;
   overflow-y: auto;
-  z-index: 30;
+  /* Leaflet's own map layers/controls use z-index values up into the
+     1000s, so this needs to clear that to stay on top of a map below it. */
+  z-index: 1200;
 }
 
 .dropdown-menu[hidden] {
