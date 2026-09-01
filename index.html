@@ -42,7 +42,12 @@
         </div>
 
         <div class="form-row">
-          <label>Location on map <span class="optional">(optional — click the map to drop a pin)</span></label>
+          <label>Location on map <span class="optional">(optional — search for an address, or click the map to drop a pin)</span></label>
+          <div class="location-search">
+            <input type="text" id="add-place-search-input" placeholder="Search for a street or place name..." aria-label="Search for a location" />
+            <button type="button" id="add-place-search-btn">Search</button>
+          </div>
+          <ul id="add-place-search-results" class="search-results"></ul>
           <div id="add-place-map" class="map-picker"></div>
           <button type="button" id="add-place-clear-pin" class="link-btn">Clear pin</button>
         </div>
@@ -95,7 +100,12 @@
   <div id="location-modal" class="modal-overlay" hidden>
     <div class="modal">
       <h3>Set location for <span id="modal-place-name"></span></h3>
-      <p class="muted">Click the map to drop or move the pin.</p>
+      <p class="muted">Search for an address, or click the map to drop or move the pin.</p>
+      <div class="location-search">
+        <input type="text" id="modal-search-input" placeholder="Search for a street or place name..." aria-label="Search for a location" />
+        <button type="button" id="modal-search-btn">Search</button>
+      </div>
+      <ul id="modal-search-results" class="search-results"></ul>
       <div id="modal-map" class="map-picker"></div>
       <div class="modal-actions">
         <button type="button" id="modal-clear-btn" class="link-btn">Clear pin</button>

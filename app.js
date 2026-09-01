@@ -256,6 +256,82 @@ function setView(view) {
   render();
 }
 
+// --- Address/place search, using OpenStreetMap's free Nominatim service ---
+// (biased towards the greater Auckland area, but not restricted to it)
+const AUCKLAND_VIEWBOX = "174.5,-36.65,175.05,-37.05";
+
+async function geocodeSearch(query) {
+  const params = new URLSearchParams({
+    format: "json",
+    q: query,
+    limit: "5",
+    viewbox: AUCKLAND_VIEWBOX,
+    countrycodes: "nz",
+  });
+  const response = await fetch(`https://nominatim.openstreetmap.org/search?${params}`);
+  if (!response.ok) throw new Error("Search request failed");
+  return response.json();
+}
+
+function setStatusMessage(resultsEl, message) {
+  resultsEl.innerHTML = "";
+  const item = document.createElement("li");
+  item.className = "search-status";
+  item.textContent = message;
+  resultsEl.appendChild(item);
+}
+
+function setupLocationSearch({ inputEl, buttonEl, resultsEl, onSelect }) {
+  let requestId = 0;
+
+  async function runSearch() {
+    const query = inputEl.value.trim();
+    if (!query) {
+      resultsEl.innerHTML = "";
+      return;
+    }
+
+    const thisRequestId = ++requestId;
+    setStatusMessage(resultsEl, "Searching…");
+
+    let results;
+    try {
+      results = await geocodeSearch(query);
+    } catch {
+      if (thisRequestId === requestId) {
+        setStatusMessage(resultsEl, "Search failed. Check your connection and try again.");
+      }
+      return;
+    }
+
+    if (thisRequestId !== requestId) return;
+
+    if (results.length === 0) {
+      setStatusMessage(resultsEl, "No matches found.");
+      return;
+    }
+
+    resultsEl.innerHTML = "";
+    for (const result of results) {
+      const item = document.createElement("li");
+      item.textContent = result.display_name;
+      item.addEventListener("click", () => {
+        onSelect(Number(result.lat), Number(result.lon));
+        resultsEl.innerHTML = "";
+      });
+      resultsEl.appendChild(item);
+    }
+  }
+
+  buttonEl.addEventListener("click", runSearch);
+  inputEl.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      runSearch();
+    }
+  });
+}
+
 // --- Map: pick a location when adding a new place ---
 
 const addPlaceMap = L.map("add-place-map").setView(AUCKLAND_CENTER, 12);
@@ -271,12 +347,25 @@ addPlaceMap.on("click", (event) => {
 
 document.getElementById("add-place-clear-pin").addEventListener("click", clearAddPlacePin);
 
+setupLocationSearch({
+  inputEl: document.getElementById("add-place-search-input"),
+  buttonEl: document.getElementById("add-place-search-btn"),
+  resultsEl: document.getElementById("add-place-search-results"),
+  onSelect: (lat, lng) => {
+    addPlacePendingLocation = { lat, lng };
+    addPlaceMap.setView([lat, lng], 16);
+    setMarker(addPlaceMap, addPlaceMarker, addPlacePendingLocation, (marker) => (addPlaceMarker = marker));
+  },
+});
+
 function clearAddPlacePin() {
   addPlacePendingLocation = null;
   if (addPlaceMarker) {
     addPlaceMap.removeLayer(addPlaceMarker);
     addPlaceMarker = null;
   }
+  document.getElementById("add-place-search-input").value = "";
+  document.getElementById("add-place-search-results").innerHTML = "";
 }
 
 function setMarker(map, existingMarker, location, onCreated) {
@@ -294,16 +383,31 @@ const modalPlaceNameEl = document.getElementById("modal-place-name");
 const modalSaveBtn = document.getElementById("modal-save-btn");
 const modalClearBtn = document.getElementById("modal-clear-btn");
 const modalCancelBtn = document.getElementById("modal-cancel-btn");
+const modalSearchInput = document.getElementById("modal-search-input");
+const modalSearchResults = document.getElementById("modal-search-results");
 
 let modalMap = null;
 let modalMarker = null;
 let modalLocation = null;
 let modalPlaceId = null;
 
+setupLocationSearch({
+  inputEl: modalSearchInput,
+  buttonEl: document.getElementById("modal-search-btn"),
+  resultsEl: modalSearchResults,
+  onSelect: (lat, lng) => {
+    modalLocation = { lat, lng };
+    modalMap.setView([lat, lng], 16);
+    setMarker(modalMap, modalMarker, modalLocation, (marker) => (modalMarker = marker));
+  },
+});
+
 function openLocationModal(place) {
   modalPlaceId = place.id;
   modalLocation = hasLocation(place) ? { lat: place.lat, lng: place.lng } : null;
   modalPlaceNameEl.textContent = place.name;
+  modalSearchInput.value = "";
+  modalSearchResults.innerHTML = "";
   locationModal.hidden = false;
 
   if (!modalMap) {

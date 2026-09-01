@@ -196,6 +196,53 @@ button:hover {
   color: var(--muted);
 }
 
+.location-search {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.location-search input[type="text"] {
+  flex: 1;
+}
+
+.search-results {
+  list-style: none;
+  margin: 0.3rem 0 0;
+  padding: 0;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.search-results:not(:empty) {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.search-results li {
+  padding: 0.5rem 0.65rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+
+.search-results li:last-child {
+  border-bottom: none;
+}
+
+.search-results li:hover {
+  background: var(--tag-bg);
+}
+
+.search-results li.search-status {
+  cursor: default;
+  color: var(--muted);
+}
+
+.search-results li.search-status:hover {
+  background: none;
+}
+
 .map-picker {
   height: 220px;
   width: 100%;

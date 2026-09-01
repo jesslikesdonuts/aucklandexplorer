@@ -12,6 +12,8 @@ Just three files, no build step, and one small external library:
 - [Leaflet](https://leafletjs.com/), loaded from a CDN, draws the map. It's a small,
   free mapping library that uses [OpenStreetMap](https://www.openstreetmap.org/)
   for map tiles — no API key, no billing, no signup required (unlike Google Maps).
+- Address/place search uses OpenStreetMap's free
+  [Nominatim](https://nominatim.org/) search service — also no API key needed.
 
 There's no server and no database. Your places are saved with the browser's built-in
 `localStorage`, which is a small key-value store every browser provides. This means:
@@ -61,9 +63,10 @@ npx serve
 - Categories are fixed: Breakfast/Brunch, Coffee, Bakery, Lunch, Dinner, Bar, Activities.
 - Use the two dropdowns under "Browse places" to filter by suburb and/or category.
 - Each place has a **Delete** button if you want to remove it.
-- When adding a place, you can optionally click the small map to drop a pin at its
-  location. This is optional — a place without a pin still saves and shows up in the
-  list, it just won't appear on the map.
+- When adding a place, you can optionally type a street or place name into the search
+  box above the map and pick a result to jump the map there and drop a pin — or just
+  click the map yourself if you'd rather. This is optional — a place without a pin
+  still saves and shows up in the list, it just won't appear on the map.
 - Each place also has a **📍 Set location** / **📍 Update location** button, so you
   can add or move a pin after the fact (including for the pre-loaded example places).
 - Click **Map** (next to **List**, above the places) to see a map with a pin for every
