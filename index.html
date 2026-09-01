@@ -17,20 +17,21 @@
 
     <section class="card">
       <h2>Add a new place</h2>
+      <p class="muted">Fields marked with * are required.</p>
       <form id="place-form">
         <div class="form-row">
-          <label for="place-name">Name</label>
+          <label for="place-name">Name <span class="required">*</span></label>
           <input type="text" id="place-name" placeholder="e.g. Federal Delicatessen" required />
         </div>
 
         <div class="form-row">
-          <label for="place-suburb">Suburb</label>
+          <label for="place-suburb">Suburb <span class="required">*</span></label>
           <input type="text" id="place-suburb" list="suburb-suggestions" placeholder="e.g. Ponsonby" required />
           <datalist id="suburb-suggestions"></datalist>
         </div>
 
         <div class="form-row">
-          <label for="place-category">Category</label>
+          <label for="place-category">Category <span class="required">*</span></label>
           <select id="place-category" required>
             <option value="" disabled selected>Choose a category</option>
           </select>

@@ -73,6 +73,10 @@ body {
   color: var(--muted);
 }
 
+.required {
+  color: #b42318;
+}
+
 input[type="text"],
 select,
 textarea {
