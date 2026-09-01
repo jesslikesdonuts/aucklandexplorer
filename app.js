@@ -333,14 +333,14 @@ form.addEventListener("submit", (event) => {
 
 function updateSuburbSuggestions() {
   const query = suburbInput.value.trim().toLowerCase();
+  const suburbs = getSuburbs();
+  // With nothing typed yet, show every suburb in use (like clicking open a
+  // dropdown); once typing starts, narrow it down. Free text is always still
+  // allowed — suburbs aren't limited to this list.
+  const matches = query ? suburbs.filter((suburb) => suburb.toLowerCase().includes(query)) : suburbs;
+
   suburbSuggestionsEl.innerHTML = "";
 
-  if (!query) {
-    suburbSuggestionsEl.hidden = true;
-    return;
-  }
-
-  const matches = getSuburbs().filter((suburb) => suburb.toLowerCase().includes(query));
   if (matches.length === 0) {
     suburbSuggestionsEl.hidden = true;
     return;
@@ -365,6 +365,10 @@ function updateSuburbSuggestions() {
 
 suburbInput.addEventListener("input", updateSuburbSuggestions);
 suburbInput.addEventListener("focus", updateSuburbSuggestions);
+suburbInput.addEventListener("click", updateSuburbSuggestions);
+suburbInput.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") suburbSuggestionsEl.hidden = true;
+});
 suburbInput.addEventListener("blur", () => {
   suburbSuggestionsEl.hidden = true;
 });
