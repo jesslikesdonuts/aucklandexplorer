@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Auckland Explorer</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -40,6 +41,12 @@
           <textarea id="place-notes" rows="2" placeholder="Anything worth remembering — what to order, best time to go..."></textarea>
         </div>
 
+        <div class="form-row">
+          <label>Location on map <span class="optional">(optional — click the map to drop a pin)</span></label>
+          <div id="add-place-map" class="map-picker"></div>
+          <button type="button" id="add-place-clear-pin" class="link-btn">Clear pin</button>
+        </div>
+
         <button type="submit">Add place</button>
       </form>
     </section>
@@ -61,16 +68,46 @@
         </div>
       </div>
 
+      <div class="view-toggle">
+        <button type="button" id="view-list-btn" class="active">List</button>
+        <button type="button" id="view-map-btn">Map</button>
+      </div>
+
       <p id="places-count" class="muted"></p>
-      <div id="places-list" class="places-list"></div>
+
+      <div id="list-view">
+        <div id="places-list" class="places-list"></div>
+      </div>
+
+      <div id="map-view" hidden>
+        <div id="browse-map" class="browse-map"></div>
+        <p id="map-unpinned-note" class="muted"></p>
+      </div>
     </section>
 
   </main>
 
   <footer class="site-footer">
     <p>Data is stored only in this browser (localStorage). Clearing browser data, or opening the app in a different browser or device, will not show the same list.</p>
+    <p>Map tiles &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors.</p>
   </footer>
 
+  <div id="location-modal" class="modal-overlay" hidden>
+    <div class="modal">
+      <h3>Set location for <span id="modal-place-name"></span></h3>
+      <p class="muted">Click the map to drop or move the pin.</p>
+      <div id="modal-map" class="map-picker"></div>
+      <div class="modal-actions">
+        <button type="button" id="modal-clear-btn" class="link-btn">Clear pin</button>
+        <div class="modal-actions-right">
+          <button type="button" id="modal-cancel-btn" class="secondary-btn">Cancel</button>
+          <button type="button" id="modal-save-btn">Save location</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
