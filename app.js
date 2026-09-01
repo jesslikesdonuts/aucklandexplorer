@@ -25,12 +25,12 @@ const AUCKLAND_CENTER = [-36.8485, 174.7633];
 // Approximate pins so the map view isn't empty on first load — feel free to
 // correct/delete these once you've added your own places.
 const SEED_PLACES = [
-  { id: "seed-1", name: "Federal Delicatessen", suburb: "Auckland CBD", category: "Breakfast/Brunch", notes: "Classic American-style diner brunch.", lat: -36.8519, lng: 174.7615 },
-  { id: "seed-2", name: "Best Ugly Bagels", suburb: "Ponsonby", category: "Bakery", notes: "", lat: -36.8558, lng: 174.7449 },
-  { id: "seed-3", name: "Ozone Coffee Roasters", suburb: "Britomart", category: "Coffee", notes: "", lat: -36.8442, lng: 174.7679 },
-  { id: "seed-4", name: "Cocoro", suburb: "Mount Eden", category: "Dinner", notes: "Japanese, book ahead.", lat: -36.8748, lng: 174.7637 },
-  { id: "seed-5", name: "Cheese Barrel", suburb: "Kingsland", category: "Bar", notes: "Wine and cheese, good for a wind-down.", lat: -36.8697, lng: 174.7434 },
-  { id: "seed-6", name: "Mission Bay Beach", suburb: "Mission Bay", category: "Activities", notes: "Walk along the waterfront.", lat: -36.8477, lng: 174.8253 },
+  { id: "seed-1", name: "Federal Delicatessen", suburb: "Auckland CBD", categories: ["Breakfast/Brunch"], notes: "Classic American-style diner brunch.", lat: -36.8519, lng: 174.7615 },
+  { id: "seed-2", name: "Best Ugly Bagels", suburb: "Ponsonby", categories: ["Bakery"], notes: "", lat: -36.8558, lng: 174.7449 },
+  { id: "seed-3", name: "Ozone Coffee Roasters", suburb: "Britomart", categories: ["Coffee"], notes: "", lat: -36.8442, lng: 174.7679 },
+  { id: "seed-4", name: "Cocoro", suburb: "Mount Eden", categories: ["Dinner"], notes: "Japanese, book ahead.", lat: -36.8748, lng: 174.7637 },
+  { id: "seed-5", name: "Cheese Barrel", suburb: "Kingsland", categories: ["Bar"], notes: "Wine and cheese, good for a wind-down.", lat: -36.8697, lng: 174.7434 },
+  { id: "seed-6", name: "Mission Bay Beach", suburb: "Mission Bay", categories: ["Activities"], notes: "Walk along the waterfront.", lat: -36.8477, lng: 174.8253 },
 ];
 
 function loadPlaces() {
@@ -47,10 +47,27 @@ function savePlaces(places) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(places));
 }
 
+// Places used to have a single `category` string. Older saved data may
+// still be in that shape, so convert it to a `categories` array on load.
+function migrateToCategoriesArray(rawPlaces) {
+  let changed = false;
+  const migrated = rawPlaces.map((place) => {
+    if (Array.isArray(place.categories)) return place;
+    changed = true;
+    const { category, ...rest } = place;
+    return { ...rest, categories: category ? [category] : [] };
+  });
+  return { migrated, changed };
+}
+
 let places = loadPlaces();
 if (places === null) {
   places = SEED_PLACES;
   savePlaces(places);
+} else {
+  const { migrated, changed } = migrateToCategoriesArray(places);
+  places = migrated;
+  if (changed) savePlaces(places);
 }
 
 function getSuburbs() {
@@ -219,9 +236,142 @@ function createDropdown({ containerEl, onChange }) {
   return dropdown;
 }
 
-const categoryDropdown = createDropdown({
+// A checkbox-style variant of the dropdown above, for picking more than one
+// option at once (used for a place's categories). The menu stays open after
+// each pick so multiple options can be toggled in one go.
+function createMultiSelectDropdown({ containerEl, placeholderText, onChange }) {
+  const toggleEl = containerEl.querySelector(".dropdown-toggle");
+  const labelEl = toggleEl.querySelector(".dropdown-toggle-label");
+  const menuEl = containerEl.querySelector(".dropdown-menu");
+  let labels = new Map();
+  let optionValues = [];
+  let selected = new Set();
+  let activeIndex = -1;
+
+  function setActiveIndex(index) {
+    const items = menuEl.children;
+    if (items.length === 0) return;
+    activeIndex = (index + items.length) % items.length;
+    for (let i = 0; i < items.length; i++) {
+      items[i].classList.toggle("highlighted", i === activeIndex);
+    }
+    items[activeIndex].scrollIntoView({ block: "nearest" });
+  }
+
+  function updateLabel() {
+    const chosenLabels = optionValues.filter((value) => selected.has(value)).map((value) => labels.get(value));
+    if (chosenLabels.length === 0) labelEl.textContent = placeholderText;
+    else if (chosenLabels.length <= 2) labelEl.textContent = chosenLabels.join(", ");
+    else labelEl.textContent = `${chosenLabels.length} categories selected`;
+  }
+
+  const dropdown = {
+    el: containerEl,
+    open() {
+      menuEl.hidden = false;
+      containerEl.classList.add("open");
+      toggleEl.setAttribute("aria-expanded", "true");
+      openDropdowns.add(dropdown);
+      setActiveIndex(0);
+    },
+    close() {
+      menuEl.hidden = true;
+      containerEl.classList.remove("open");
+      toggleEl.setAttribute("aria-expanded", "false");
+      openDropdowns.delete(dropdown);
+      activeIndex = -1;
+    },
+    setOptions(options) {
+      labels = new Map(options.map((option) => [option.value, option.label]));
+      optionValues = options.map((option) => option.value);
+      menuEl.innerHTML = "";
+      for (const option of options) {
+        const item = document.createElement("li");
+        item.setAttribute("role", "option");
+        item.dataset.value = option.value;
+        item.setAttribute("aria-selected", selected.has(option.value) ? "true" : "false");
+        item.classList.toggle("active", selected.has(option.value));
+
+        const checkbox = document.createElement("span");
+        checkbox.className = "option-checkbox";
+        item.appendChild(checkbox);
+        item.appendChild(document.createTextNode(option.label));
+
+        // mousedown (not click), same reasoning as the single-select
+        // dropdown: it stops the browser shifting focus off the toggle
+        // button before the pick registers.
+        item.addEventListener("mousedown", (event) => {
+          event.preventDefault();
+          dropdown.toggleValue(option.value);
+        });
+        menuEl.appendChild(item);
+      }
+    },
+    toggleValue(value) {
+      if (selected.has(value)) selected.delete(value);
+      else selected.add(value);
+      for (const item of menuEl.children) {
+        const isSelected = selected.has(item.dataset.value);
+        item.classList.toggle("active", isSelected);
+        item.setAttribute("aria-selected", isSelected ? "true" : "false");
+      }
+      updateLabel();
+      containerEl.classList.remove("invalid");
+      onChange([...selected]);
+    },
+    reset() {
+      selected = new Set();
+      updateLabel();
+      for (const item of menuEl.children) {
+        item.classList.remove("active");
+        item.setAttribute("aria-selected", "false");
+      }
+    },
+    get value() {
+      return optionValues.filter((value) => selected.has(value));
+    },
+  };
+
+  toggleEl.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (menuEl.hidden) dropdown.open();
+    else dropdown.close();
+  });
+
+  toggleEl.addEventListener("blur", () => dropdown.close());
+
+  toggleEl.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      if (menuEl.hidden) dropdown.open();
+      else setActiveIndex(activeIndex + 1);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      if (menuEl.hidden) dropdown.open();
+      else setActiveIndex(activeIndex === -1 ? optionValues.length - 1 : activeIndex - 1);
+    } else if (event.key === "Home" && !menuEl.hidden) {
+      event.preventDefault();
+      setActiveIndex(0);
+    } else if (event.key === "End" && !menuEl.hidden) {
+      event.preventDefault();
+      setActiveIndex(optionValues.length - 1);
+    } else if ((event.key === "Enter" || event.key === " ") && !menuEl.hidden) {
+      event.preventDefault();
+      if (activeIndex >= 0) dropdown.toggleValue(optionValues[activeIndex]);
+    } else if (event.key === "Escape" && !menuEl.hidden) {
+      event.preventDefault();
+      dropdown.close();
+    }
+  });
+
+  updateLabel();
+  return dropdown;
+}
+
+const categoryDropdown = createMultiSelectDropdown({
   containerEl: document.getElementById("place-category-dropdown"),
-  onChange: () => categoryDropdown.el.classList.remove("invalid"),
+  placeholderText: "Choose categories",
+  onChange: () => {},
 });
 
 const filterSuburbDropdown = createDropdown({
@@ -278,13 +428,13 @@ function getFilteredPlaces() {
 
   const filtered = places
     .filter((p) => !suburbFilter || p.suburb === suburbFilter)
-    .filter((p) => !categoryFilter || p.category === categoryFilter);
+    .filter((p) => !categoryFilter || p.categories.includes(categoryFilter));
 
   switch (sortDropdown.value) {
     case "name":
       return filtered.sort((a, b) => a.name.localeCompare(b.name));
     case "category":
-      return filtered.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+      return filtered.sort((a, b) => a.categories[0].localeCompare(b.categories[0]) || a.name.localeCompare(b.name));
     case "newest":
       // Places are always added to the end of the list, so the existing
       // order is already oldest-to-newest — reversing it is enough.
@@ -336,7 +486,9 @@ function buildPlaceCard(place) {
   const tags = document.createElement("div");
   tags.className = "place-tags";
   tags.appendChild(makeTag(place.suburb));
-  tags.appendChild(makeTag(place.category));
+  for (const category of place.categories) {
+    tags.appendChild(makeTag(category));
+  }
   info.appendChild(tags);
 
   if (place.notes) {
@@ -388,8 +540,8 @@ function deletePlace(id) {
 form.addEventListener("submit", (event) => {
   event.preventDefault();
 
-  const category = categoryDropdown.value;
-  if (!category) {
+  const categories = categoryDropdown.value;
+  if (categories.length === 0) {
     categoryDropdown.el.classList.add("invalid");
     categoryDropdown.el.querySelector(".dropdown-toggle").focus();
     return;
@@ -399,7 +551,7 @@ form.addEventListener("submit", (event) => {
     id: makeId(),
     name: nameInput.value.trim(),
     suburb: suburbInput.value.trim(),
-    category,
+    categories,
     notes: notesInput.value.trim(),
     lat: addPlacePendingLocation ? addPlacePendingLocation.lat : null,
     lng: addPlacePendingLocation ? addPlacePendingLocation.lng : null,
@@ -411,7 +563,7 @@ form.addEventListener("submit", (event) => {
   savePlaces(places);
 
   form.reset();
-  categoryDropdown.reset("Choose a category");
+  categoryDropdown.reset();
   suburbSuggestionsEl.hidden = true;
   clearAddPlacePin();
   refreshSuburbControls();
@@ -787,7 +939,9 @@ function renderMapView(filtered) {
   const withLocation = filtered.filter(hasLocation);
 
   for (const place of withLocation) {
-    const marker = L.marker([place.lat, place.lng], { icon: getCategoryIcon(place.category) }).addTo(browseMap);
+    // A place can have several categories now; the pin just uses the first
+    // one's color rather than trying to show all of them at once.
+    const marker = L.marker([place.lat, place.lng], { icon: getCategoryIcon(place.categories[0]) }).addTo(browseMap);
     marker.bindPopup(buildPopupContent(place));
     browseMarkers.push(marker);
   }
@@ -814,7 +968,7 @@ function buildPopupContent(place) {
   wrapper.appendChild(name);
 
   wrapper.appendChild(document.createElement("br"));
-  wrapper.appendChild(document.createTextNode(`${place.suburb} · ${place.category}`));
+  wrapper.appendChild(document.createTextNode(`${place.suburb} · ${place.categories.join(", ")}`));
 
   if (place.notes) {
     wrapper.appendChild(document.createElement("br"));

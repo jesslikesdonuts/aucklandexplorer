@@ -34,13 +34,13 @@
         </div>
 
         <div class="form-row">
-          <label id="place-category-label">Category <span class="required">*</span></label>
+          <label id="place-category-label">Category <span class="required">*</span> <span class="optional">(pick as many as apply)</span></label>
           <div class="dropdown" id="place-category-dropdown">
             <button type="button" class="dropdown-toggle" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="place-category-label">
-              <span class="dropdown-toggle-label">Choose a category</span>
+              <span class="dropdown-toggle-label">Choose categories</span>
               <span class="dropdown-chevron" aria-hidden="true"></span>
             </button>
-            <ul class="dropdown-menu" role="listbox" hidden></ul>
+            <ul class="dropdown-menu" role="listbox" aria-multiselectable="true" hidden></ul>
           </div>
         </div>
 

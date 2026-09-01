@@ -495,3 +495,34 @@ button:hover {
 .dropdown-menu li.highlighted {
   background: var(--tag-bg);
 }
+
+.option-checkbox {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 0.55rem;
+  vertical-align: middle;
+  position: relative;
+  top: -1px;
+  border: 1.5px solid var(--border);
+  border-radius: 3px;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.dropdown-menu li.active .option-checkbox {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.dropdown-menu li.active .option-checkbox::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}

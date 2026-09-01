@@ -60,7 +60,10 @@ npx serve
   in the Suburb field. As you add places, the Suburb filter dropdown fills in
   automatically with the suburbs you've used, and you'll get autocomplete suggestions
   when typing.
-- Categories are fixed: Breakfast/Brunch, Coffee, Bakery, Lunch, Dinner, Bar, Activities.
+- Categories are fixed (Breakfast/Brunch, Coffee, Bakery, Lunch, Dinner, Bar,
+  Activities), but a place can have more than one — tick as many as apply in the
+  Category dropdown. Filtering by a category matches any place that has it, even if
+  it also has others.
 - Use the Suburb and Category dropdowns under "Browse places" to filter the list, and
   the Sort by dropdown to order it — by Suburb, Name, Category, or Newest first (most
   recently added first).
@@ -73,8 +76,9 @@ npx serve
   can add or move a pin after the fact (including for the pre-loaded example places).
 - Click **Map** (next to **List**, above the places) to see a map with a pin for every
   place that has one, respecting whatever suburb/category filters are active. Click a
-  pin to see that place's details. Pins are colored by category, with a small legend
-  shown above the map.
+  pin to see that place's details. Pins are colored by category (a place with more
+  than one category is colored by the first one), with a small legend shown above
+  the map.
 
 The app comes pre-loaded with a handful of example places the first time you open it,
 just so the list isn't empty. Their map pins are approximate. Delete them whenever you
