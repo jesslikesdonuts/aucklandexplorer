@@ -10,6 +10,16 @@ const CATEGORIES = [
   "Activities",
 ];
 
+const CATEGORY_COLORS = {
+  "Breakfast/Brunch": "#f59e0b",
+  Coffee: "#78350f",
+  Bakery: "#db2777",
+  Lunch: "#16a34a",
+  Dinner: "#7c3aed",
+  Bar: "#dc2626",
+  Activities: "#2563eb",
+};
+
 const AUCKLAND_CENTER = [-36.8485, 174.7633];
 
 // Approximate pins so the map view isn't empty on first load — feel free to
@@ -592,6 +602,45 @@ modalSaveBtn.addEventListener("click", () => {
 
 // --- Map: browse view showing pins for the currently filtered places ---
 
+const categoryIcons = new Map();
+
+function getCategoryIcon(category) {
+  if (!categoryIcons.has(category)) {
+    const color = CATEGORY_COLORS[category] || "#1f6f5c";
+    categoryIcons.set(
+      category,
+      L.divIcon({
+        className: "category-pin",
+        html: `<svg width="25" height="34" viewBox="0 0 25 34" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12.5 0C5.6 0 0 5.6 0 12.5 0 21.9 12.5 34 12.5 34S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="${color}" stroke="#fff" stroke-width="1.5" />
+          <circle cx="12.5" cy="12.5" r="5" fill="#fff" />
+        </svg>`,
+        iconSize: [25, 34],
+        iconAnchor: [12.5, 34],
+        popupAnchor: [0, -30],
+      })
+    );
+  }
+  return categoryIcons.get(category);
+}
+
+function populateMapLegend() {
+  const legendEl = document.getElementById("map-legend");
+  legendEl.innerHTML = "";
+  for (const category of CATEGORIES) {
+    const item = document.createElement("span");
+    item.className = "map-legend-item";
+
+    const dot = document.createElement("span");
+    dot.className = "legend-dot";
+    dot.style.background = CATEGORY_COLORS[category];
+
+    item.appendChild(dot);
+    item.appendChild(document.createTextNode(category));
+    legendEl.appendChild(item);
+  }
+}
+
 let browseMap = null;
 let browseMarkers = [];
 
@@ -610,7 +659,7 @@ function renderMapView(filtered) {
   const withLocation = filtered.filter(hasLocation);
 
   for (const place of withLocation) {
-    const marker = L.marker([place.lat, place.lng]).addTo(browseMap);
+    const marker = L.marker([place.lat, place.lng], { icon: getCategoryIcon(place.category) }).addTo(browseMap);
     marker.bindPopup(buildPopupContent(place));
     browseMarkers.push(marker);
   }
@@ -650,5 +699,6 @@ function buildPopupContent(place) {
 }
 
 populateCategoryOptions();
+populateMapLegend();
 refreshSuburbControls();
 render();

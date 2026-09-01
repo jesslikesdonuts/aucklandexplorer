@@ -71,7 +71,8 @@ npx serve
   can add or move a pin after the fact (including for the pre-loaded example places).
 - Click **Map** (next to **List**, above the places) to see a map with a pin for every
   place that has one, respecting whatever suburb/category filters are active. Click a
-  pin to see that place's details.
+  pin to see that place's details. Pins are colored by category, with a small legend
+  shown above the map.
 
 The app comes pre-loaded with a handful of example places the first time you open it,
 just so the list isn't empty. Their map pins are approximate. Delete them whenever you
