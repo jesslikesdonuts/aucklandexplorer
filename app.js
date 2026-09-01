@@ -299,7 +299,7 @@ function setupLocationSearch({ inputEl, buttonEl, resultsEl, onSelect }) {
       results = await geocodeSearch(query);
     } catch {
       if (thisRequestId === requestId) {
-        setStatusMessage(resultsEl, "Search failed. Check your connection and try again.");
+        setStatusMessage(resultsEl, "Hmm, that search didn't work — check your internet connection and try again.");
       }
       return;
     }
@@ -307,7 +307,7 @@ function setupLocationSearch({ inputEl, buttonEl, resultsEl, onSelect }) {
     if (thisRequestId !== requestId) return;
 
     if (results.length === 0) {
-      setStatusMessage(resultsEl, "No matches found.");
+      setStatusMessage(resultsEl, "Couldn't find that one — try just the street name, or click the map instead.");
       return;
     }
 
