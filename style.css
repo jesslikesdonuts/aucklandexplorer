@@ -138,7 +138,9 @@ button:hover {
   gap: 1rem;
 }
 
-.place-info {
+.place-info,
+.place-info:hover,
+.place-info:focus-visible {
   display: block;
   background: none;
   border: none;
