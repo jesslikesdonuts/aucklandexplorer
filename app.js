@@ -110,6 +110,18 @@ function createDropdown({ containerEl, onChange }) {
   const menuEl = containerEl.querySelector(".dropdown-menu");
   let currentValue = null;
   let labels = new Map();
+  let optionValues = [];
+  let activeIndex = -1;
+
+  function setActiveIndex(index) {
+    const items = menuEl.children;
+    if (items.length === 0) return;
+    activeIndex = (index + items.length) % items.length;
+    for (let i = 0; i < items.length; i++) {
+      items[i].classList.toggle("highlighted", i === activeIndex);
+    }
+    items[activeIndex].scrollIntoView({ block: "nearest" });
+  }
 
   const dropdown = {
     el: containerEl,
@@ -118,15 +130,19 @@ function createDropdown({ containerEl, onChange }) {
       containerEl.classList.add("open");
       toggleEl.setAttribute("aria-expanded", "true");
       openDropdowns.add(dropdown);
+      const selectedIndex = optionValues.indexOf(currentValue);
+      setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
     },
     close() {
       menuEl.hidden = true;
       containerEl.classList.remove("open");
       toggleEl.setAttribute("aria-expanded", "false");
       openDropdowns.delete(dropdown);
+      activeIndex = -1;
     },
     setOptions(options) {
       labels = new Map(options.map((option) => [option.value, option.label]));
+      optionValues = options.map((option) => option.value);
       menuEl.innerHTML = "";
       for (const option of options) {
         const item = document.createElement("li");
@@ -134,7 +150,14 @@ function createDropdown({ containerEl, onChange }) {
         item.setAttribute("role", "option");
         item.dataset.value = option.value;
         if (option.value === currentValue) item.classList.add("active");
-        item.addEventListener("click", () => dropdown.select(option.value));
+        // mousedown (rather than click), with preventDefault, stops the
+        // browser's default focus-shifting away from the toggle button —
+        // otherwise that blur fires first and the blur-to-close handler
+        // below hides the menu before the click can land on it.
+        item.addEventListener("mousedown", (event) => {
+          event.preventDefault();
+          dropdown.select(option.value);
+        });
         menuEl.appendChild(item);
       }
     },
@@ -145,6 +168,7 @@ function createDropdown({ containerEl, onChange }) {
         item.classList.toggle("active", item.dataset.value === value);
       }
       dropdown.close();
+      toggleEl.focus();
       if (!silent) onChange(value);
     },
     reset(placeholderText) {
@@ -161,6 +185,35 @@ function createDropdown({ containerEl, onChange }) {
     event.stopPropagation();
     if (menuEl.hidden) dropdown.open();
     else dropdown.close();
+  });
+
+  // Tabbing away from an open dropdown should close it rather than leaving
+  // it dangling open (a click on an option doesn't move focus off the
+  // button, so this doesn't interfere with mouse selection).
+  toggleEl.addEventListener("blur", () => dropdown.close());
+
+  // Keyboard support: arrow keys move a highlighted option (focus stays on
+  // the toggle button throughout, the same way a native <select> works),
+  // Enter picks the highlighted one.
+  toggleEl.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      if (menuEl.hidden) dropdown.open();
+      else setActiveIndex(activeIndex + 1);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      if (menuEl.hidden) dropdown.open();
+      else setActiveIndex(activeIndex - 1);
+    } else if (event.key === "Home" && !menuEl.hidden) {
+      event.preventDefault();
+      setActiveIndex(0);
+    } else if (event.key === "End" && !menuEl.hidden) {
+      event.preventDefault();
+      setActiveIndex(optionValues.length - 1);
+    } else if ((event.key === "Enter" || event.key === " ") && !menuEl.hidden) {
+      event.preventDefault();
+      if (activeIndex >= 0) dropdown.select(optionValues[activeIndex]);
+    }
   });
 
   return dropdown;
@@ -369,6 +422,27 @@ form.addEventListener("submit", (event) => {
 // (suggestions are computed live from suburbs already in use, so there's
 // no separate list to keep in sync)
 
+let suburbActiveIndex = -1;
+
+function highlightSuburbItem(index) {
+  const items = suburbSuggestionsEl.children;
+  if (items.length === 0) {
+    suburbActiveIndex = -1;
+    return;
+  }
+  suburbActiveIndex = (index + items.length) % items.length;
+  for (let i = 0; i < items.length; i++) {
+    items[i].classList.toggle("highlighted", i === suburbActiveIndex);
+  }
+  items[suburbActiveIndex].scrollIntoView({ block: "nearest" });
+}
+
+function selectSuburbSuggestion(suburb) {
+  suburbInput.value = suburb;
+  suburbSuggestionsEl.hidden = true;
+  suburbActiveIndex = -1;
+}
+
 function updateSuburbSuggestions() {
   const query = suburbInput.value.trim().toLowerCase();
   const suburbs = getSuburbs();
@@ -378,6 +452,7 @@ function updateSuburbSuggestions() {
   const matches = query ? suburbs.filter((suburb) => suburb.toLowerCase().includes(query)) : suburbs;
 
   suburbSuggestionsEl.innerHTML = "";
+  suburbActiveIndex = -1;
 
   if (matches.length === 0) {
     suburbSuggestionsEl.hidden = true;
@@ -388,12 +463,12 @@ function updateSuburbSuggestions() {
     const item = document.createElement("li");
     item.textContent = suburb;
     item.setAttribute("role", "option");
+    item.dataset.value = suburb;
     // mousedown (rather than click) fires before the input blurs, so we
     // can fill the value in without the suggestions list disappearing first
     item.addEventListener("mousedown", (event) => {
       event.preventDefault();
-      suburbInput.value = suburb;
-      suburbSuggestionsEl.hidden = true;
+      selectSuburbSuggestion(suburb);
     });
     suburbSuggestionsEl.appendChild(item);
   }
@@ -404,9 +479,34 @@ function updateSuburbSuggestions() {
 suburbInput.addEventListener("input", updateSuburbSuggestions);
 suburbInput.addEventListener("focus", updateSuburbSuggestions);
 suburbInput.addEventListener("click", updateSuburbSuggestions);
+
 suburbInput.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") suburbSuggestionsEl.hidden = true;
+  const suggestionsOpen = !suburbSuggestionsEl.hidden && suburbSuggestionsEl.children.length > 0;
+
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    if (suggestionsOpen) highlightSuburbItem(suburbActiveIndex + 1);
+    else updateSuburbSuggestions();
+  } else if (event.key === "ArrowUp") {
+    event.preventDefault();
+    if (suggestionsOpen) {
+      const previousIndex = suburbActiveIndex === -1 ? suburbSuggestionsEl.children.length - 1 : suburbActiveIndex - 1;
+      highlightSuburbItem(previousIndex);
+    }
+  } else if (event.key === "Enter" && suggestionsOpen) {
+    // Prevent the Enter from also submitting the whole form — it should
+    // only pick the highlighted suggestion (or just close the list).
+    event.preventDefault();
+    if (suburbActiveIndex >= 0) {
+      selectSuburbSuggestion(suburbSuggestionsEl.children[suburbActiveIndex].dataset.value);
+    } else {
+      suburbSuggestionsEl.hidden = true;
+    }
+  } else if (event.key === "Escape") {
+    suburbSuggestionsEl.hidden = true;
+  }
 });
+
 suburbInput.addEventListener("blur", () => {
   suburbSuggestionsEl.hidden = true;
 });
