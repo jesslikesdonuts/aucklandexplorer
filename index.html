@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auckland Explorer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <h1>Auckland Explorer</h1>
+    <p>Places to eat, drink and visit around Auckland — saved right in your browser.</p>
+  </header>
+
+  <main class="container">
+
+    <section class="card">
+      <h2>Add a new place</h2>
+      <form id="place-form">
+        <div class="form-row">
+          <label for="place-name">Name</label>
+          <input type="text" id="place-name" placeholder="e.g. Federal Delicatessen" required />
+        </div>
+
+        <div class="form-row">
+          <label for="place-suburb">Suburb</label>
+          <input type="text" id="place-suburb" list="suburb-suggestions" placeholder="e.g. Ponsonby" required />
+          <datalist id="suburb-suggestions"></datalist>
+        </div>
+
+        <div class="form-row">
+          <label for="place-category">Category</label>
+          <select id="place-category" required>
+            <option value="" disabled selected>Choose a category</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="place-notes">Notes <span class="optional">(optional)</span></label>
+          <textarea id="place-notes" rows="2" placeholder="Anything worth remembering — what to order, best time to go..."></textarea>
+        </div>
+
+        <button type="submit">Add place</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Browse places</h2>
+      <div class="filters">
+        <div class="form-row">
+          <label for="filter-suburb">Suburb</label>
+          <select id="filter-suburb">
+            <option value="">All suburbs</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="filter-category">Category</label>
+          <select id="filter-category">
+            <option value="">All categories</option>
+          </select>
+        </div>
+      </div>
+
+      <p id="places-count" class="muted"></p>
+      <div id="places-list" class="places-list"></div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>Data is stored only in this browser (localStorage). Clearing browser data, or opening the app in a different browser or device, will not show the same list.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
