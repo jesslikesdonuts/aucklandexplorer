@@ -138,6 +138,25 @@ button:hover {
   gap: 1rem;
 }
 
+.place-info {
+  display: block;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.place-info:hover h3,
+.place-info:focus-visible h3 {
+  text-decoration: underline;
+}
+
 .place-info h3 {
   margin: 0 0 0.35rem;
   font-size: 1.05rem;
@@ -336,20 +355,6 @@ button:hover {
   flex-shrink: 0;
 }
 
-.location-btn {
-  background: transparent;
-  color: var(--accent-dark);
-  border: 1px solid var(--border);
-  padding: 0.35rem 0.7rem;
-  font-size: 0.8rem;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.location-btn:hover {
-  background: var(--tag-bg);
-}
-
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -371,6 +376,8 @@ button:hover {
   padding: 1.25rem 1.5rem 1.5rem;
   max-width: 480px;
   width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .modal h3 {
@@ -379,14 +386,9 @@ button:hover {
 
 .modal-actions {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 0.9rem;
-}
-
-.modal-actions-right {
-  display: flex;
+  justify-content: flex-end;
   gap: 0.6rem;
+  margin-top: 0.9rem;
 }
 
 .secondary-btn {

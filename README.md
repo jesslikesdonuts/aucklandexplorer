@@ -68,12 +68,15 @@ npx serve
   the Sort by dropdown to order it — by Suburb, Name, Category, or Newest first (most
   recently added first).
 - Each place has a **Delete** button if you want to remove it.
-- When adding a place, you can optionally type a street or place name into the search
-  box above the map and pick a result to jump the map there and drop a pin — or just
-  click the map yourself if you'd rather. This is optional — a place without a pin
-  still saves and shows up in the list, it just won't appear on the map.
-- Each place also has a **📍 Set location** / **📍 Update location** button, so you
-  can add or move a pin after the fact (including for the pre-loaded example places).
+- Click anywhere else on a place (its name, tags, or notes) to open its details in a
+  popup, where you can edit anything about it — name, suburb, categories, notes, or
+  its map pin — and save your changes. This is the way to go back and add a category
+  you missed, fix a typo, or move a pin, on any place including the pre-loaded
+  examples.
+- When adding a place (or editing one), you can optionally type a street or place name
+  into the search box above the map and pick a result to jump the map there and drop
+  a pin — or just click the map yourself if you'd rather. This is optional — a place
+  without a pin still saves and shows up in the list, it just won't appear on the map.
 - Click **Map** (next to **List**, above the places) to see a map with a pin for every
   place that has one, respecting whatever suburb/category filters are active. Click a
   pin to see that place's details. Pins are colored by category (a place with more

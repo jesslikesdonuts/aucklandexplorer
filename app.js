@@ -319,13 +319,17 @@ function createMultiSelectDropdown({ containerEl, placeholderText, onChange }) {
       containerEl.classList.remove("invalid");
       onChange([...selected]);
     },
-    reset() {
-      selected = new Set();
-      updateLabel();
+    setSelected(values) {
+      selected = new Set(values);
       for (const item of menuEl.children) {
-        item.classList.remove("active");
-        item.setAttribute("aria-selected", "false");
+        const isSelected = selected.has(item.dataset.value);
+        item.classList.toggle("active", isSelected);
+        item.setAttribute("aria-selected", isSelected ? "true" : "false");
       }
+      updateLabel();
+    },
+    reset() {
+      dropdown.setSelected([]);
     },
     get value() {
       return optionValues.filter((value) => selected.has(value));
@@ -374,6 +378,12 @@ const categoryDropdown = createMultiSelectDropdown({
   onChange: () => {},
 });
 
+const modalCategoryDropdown = createMultiSelectDropdown({
+  containerEl: document.getElementById("modal-category-dropdown"),
+  placeholderText: "Choose categories",
+  onChange: () => {},
+});
+
 const filterSuburbDropdown = createDropdown({
   containerEl: document.getElementById("filter-suburb-dropdown"),
   onChange: render,
@@ -392,6 +402,7 @@ const sortDropdown = createDropdown({
 function populateCategoryOptions() {
   const categoryOptions = CATEGORIES.map((category) => ({ value: category, label: category }));
   categoryDropdown.setOptions(categoryOptions);
+  modalCategoryDropdown.setOptions(categoryOptions);
   filterCategoryDropdown.setOptions([{ value: "", label: "All categories" }, ...categoryOptions]);
   filterCategoryDropdown.select("", { silent: true });
 }
@@ -476,8 +487,12 @@ function buildPlaceCard(place) {
   const card = document.createElement("div");
   card.className = "place-card";
 
-  const info = document.createElement("div");
+  // The whole info area is a button so it's keyboard-reachable (Tab) and
+  // activatable (Enter/Space), not just clickable with a mouse.
+  const info = document.createElement("button");
+  info.type = "button";
   info.className = "place-info";
+  info.addEventListener("click", () => openPlaceModal(place));
 
   const name = document.createElement("h3");
   name.textContent = place.name;
@@ -501,17 +516,16 @@ function buildPlaceCard(place) {
   const actions = document.createElement("div");
   actions.className = "place-actions";
 
-  const locationBtn = document.createElement("button");
-  locationBtn.className = "location-btn";
-  locationBtn.textContent = hasLocation(place) ? "📍 Update location" : "📍 Set location";
-  locationBtn.addEventListener("click", () => openLocationModal(place));
-
   const deleteBtn = document.createElement("button");
   deleteBtn.className = "delete-btn";
   deleteBtn.textContent = "Delete";
-  deleteBtn.addEventListener("click", () => deletePlace(place.id));
+  deleteBtn.addEventListener("click", (event) => {
+    // Stop this from also bubbling up as a card click, which would pop
+    // open the details modal for a place we're about to remove.
+    event.stopPropagation();
+    deletePlace(place.id);
+  });
 
-  actions.appendChild(locationBtn);
   actions.appendChild(deleteBtn);
 
   card.appendChild(info);
@@ -572,96 +586,101 @@ form.addEventListener("submit", (event) => {
 
 // --- Suburb autocomplete, replacing the native <datalist> ---
 // (suggestions are computed live from suburbs already in use, so there's
-// no separate list to keep in sync)
+// no separate list to keep in sync; used for both the add-place form and
+// the edit-place modal)
 
-let suburbActiveIndex = -1;
+function setupSuburbAutocomplete(inputEl, suggestionsEl) {
+  let activeIndex = -1;
 
-function highlightSuburbItem(index) {
-  const items = suburbSuggestionsEl.children;
-  if (items.length === 0) {
-    suburbActiveIndex = -1;
-    return;
-  }
-  suburbActiveIndex = (index + items.length) % items.length;
-  for (let i = 0; i < items.length; i++) {
-    items[i].classList.toggle("highlighted", i === suburbActiveIndex);
-  }
-  items[suburbActiveIndex].scrollIntoView({ block: "nearest" });
-}
-
-function selectSuburbSuggestion(suburb) {
-  suburbInput.value = suburb;
-  suburbSuggestionsEl.hidden = true;
-  suburbActiveIndex = -1;
-}
-
-function updateSuburbSuggestions() {
-  const query = suburbInput.value.trim().toLowerCase();
-  const suburbs = getSuburbs();
-  // With nothing typed yet, show every suburb in use (like clicking open a
-  // dropdown); once typing starts, narrow it down. Free text is always still
-  // allowed — suburbs aren't limited to this list.
-  const matches = query ? suburbs.filter((suburb) => suburb.toLowerCase().includes(query)) : suburbs;
-
-  suburbSuggestionsEl.innerHTML = "";
-  suburbActiveIndex = -1;
-
-  if (matches.length === 0) {
-    suburbSuggestionsEl.hidden = true;
-    return;
+  function highlightItem(index) {
+    const items = suggestionsEl.children;
+    if (items.length === 0) {
+      activeIndex = -1;
+      return;
+    }
+    activeIndex = (index + items.length) % items.length;
+    for (let i = 0; i < items.length; i++) {
+      items[i].classList.toggle("highlighted", i === activeIndex);
+    }
+    items[activeIndex].scrollIntoView({ block: "nearest" });
   }
 
-  for (const suburb of matches) {
-    const item = document.createElement("li");
-    item.textContent = suburb;
-    item.setAttribute("role", "option");
-    item.dataset.value = suburb;
-    // mousedown (rather than click) fires before the input blurs, so we
-    // can fill the value in without the suggestions list disappearing first
-    item.addEventListener("mousedown", (event) => {
+  function selectSuggestion(suburb) {
+    inputEl.value = suburb;
+    suggestionsEl.hidden = true;
+    activeIndex = -1;
+  }
+
+  function updateSuggestions() {
+    const query = inputEl.value.trim().toLowerCase();
+    const suburbs = getSuburbs();
+    // With nothing typed yet, show every suburb in use (like clicking open a
+    // dropdown); once typing starts, narrow it down. Free text is always
+    // still allowed — suburbs aren't limited to this list.
+    const matches = query ? suburbs.filter((suburb) => suburb.toLowerCase().includes(query)) : suburbs;
+
+    suggestionsEl.innerHTML = "";
+    activeIndex = -1;
+
+    if (matches.length === 0) {
+      suggestionsEl.hidden = true;
+      return;
+    }
+
+    for (const suburb of matches) {
+      const item = document.createElement("li");
+      item.textContent = suburb;
+      item.setAttribute("role", "option");
+      item.dataset.value = suburb;
+      // mousedown (rather than click) fires before the input blurs, so we
+      // can fill the value in without the suggestions list disappearing first
+      item.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        selectSuggestion(suburb);
+      });
+      suggestionsEl.appendChild(item);
+    }
+
+    suggestionsEl.hidden = false;
+  }
+
+  inputEl.addEventListener("input", updateSuggestions);
+  inputEl.addEventListener("focus", updateSuggestions);
+  inputEl.addEventListener("click", updateSuggestions);
+
+  inputEl.addEventListener("keydown", (event) => {
+    const suggestionsOpen = !suggestionsEl.hidden && suggestionsEl.children.length > 0;
+
+    if (event.key === "ArrowDown") {
       event.preventDefault();
-      selectSuburbSuggestion(suburb);
-    });
-    suburbSuggestionsEl.appendChild(item);
-  }
+      if (suggestionsOpen) highlightItem(activeIndex + 1);
+      else updateSuggestions();
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      if (suggestionsOpen) {
+        const previousIndex = activeIndex === -1 ? suggestionsEl.children.length - 1 : activeIndex - 1;
+        highlightItem(previousIndex);
+      }
+    } else if (event.key === "Enter" && suggestionsOpen) {
+      // Prevent the Enter from also submitting the whole form — it should
+      // only pick the highlighted suggestion (or just close the list).
+      event.preventDefault();
+      if (activeIndex >= 0) {
+        selectSuggestion(suggestionsEl.children[activeIndex].dataset.value);
+      } else {
+        suggestionsEl.hidden = true;
+      }
+    } else if (event.key === "Escape") {
+      suggestionsEl.hidden = true;
+    }
+  });
 
-  suburbSuggestionsEl.hidden = false;
+  inputEl.addEventListener("blur", () => {
+    suggestionsEl.hidden = true;
+  });
 }
 
-suburbInput.addEventListener("input", updateSuburbSuggestions);
-suburbInput.addEventListener("focus", updateSuburbSuggestions);
-suburbInput.addEventListener("click", updateSuburbSuggestions);
-
-suburbInput.addEventListener("keydown", (event) => {
-  const suggestionsOpen = !suburbSuggestionsEl.hidden && suburbSuggestionsEl.children.length > 0;
-
-  if (event.key === "ArrowDown") {
-    event.preventDefault();
-    if (suggestionsOpen) highlightSuburbItem(suburbActiveIndex + 1);
-    else updateSuburbSuggestions();
-  } else if (event.key === "ArrowUp") {
-    event.preventDefault();
-    if (suggestionsOpen) {
-      const previousIndex = suburbActiveIndex === -1 ? suburbSuggestionsEl.children.length - 1 : suburbActiveIndex - 1;
-      highlightSuburbItem(previousIndex);
-    }
-  } else if (event.key === "Enter" && suggestionsOpen) {
-    // Prevent the Enter from also submitting the whole form — it should
-    // only pick the highlighted suggestion (or just close the list).
-    event.preventDefault();
-    if (suburbActiveIndex >= 0) {
-      selectSuburbSuggestion(suburbSuggestionsEl.children[suburbActiveIndex].dataset.value);
-    } else {
-      suburbSuggestionsEl.hidden = true;
-    }
-  } else if (event.key === "Escape") {
-    suburbSuggestionsEl.hidden = true;
-  }
-});
-
-suburbInput.addEventListener("blur", () => {
-  suburbSuggestionsEl.hidden = true;
-});
+setupSuburbAutocomplete(suburbInput, suburbSuggestionsEl);
 
 viewListBtn.addEventListener("click", () => setView("list"));
 viewMapBtn.addEventListener("click", () => setView("map"));
@@ -797,9 +816,12 @@ function setMarker(map, existingMarker, location, onCreated) {
 
 // --- Map: set/update a location for an existing place, via a modal ---
 
-const locationModal = document.getElementById("location-modal");
-const modalPlaceNameEl = document.getElementById("modal-place-name");
-const modalSaveBtn = document.getElementById("modal-save-btn");
+const placeModal = document.getElementById("place-modal");
+const modalForm = document.getElementById("modal-form");
+const modalNameInput = document.getElementById("modal-name");
+const modalSuburbInput = document.getElementById("modal-suburb");
+const modalSuburbSuggestionsEl = document.getElementById("modal-suburb-suggestions");
+const modalNotesInput = document.getElementById("modal-notes");
 const modalClearBtn = document.getElementById("modal-clear-btn");
 const modalCancelBtn = document.getElementById("modal-cancel-btn");
 const modalSearchInput = document.getElementById("modal-search-input");
@@ -809,6 +831,8 @@ let modalMap = null;
 let modalMarker = null;
 let modalLocation = null;
 let modalPlaceId = null;
+
+setupSuburbAutocomplete(modalSuburbInput, modalSuburbSuggestionsEl);
 
 setupLocationSearch({
   inputEl: modalSearchInput,
@@ -821,13 +845,19 @@ setupLocationSearch({
   },
 });
 
-function openLocationModal(place) {
+function openPlaceModal(place) {
   modalPlaceId = place.id;
+  modalNameInput.value = place.name;
+  modalSuburbInput.value = place.suburb;
+  modalNotesInput.value = place.notes || "";
+  modalCategoryDropdown.setSelected(place.categories);
+  modalCategoryDropdown.el.classList.remove("invalid");
+  modalSuburbSuggestionsEl.hidden = true;
+
   modalLocation = hasLocation(place) ? { lat: place.lat, lng: place.lng } : null;
-  modalPlaceNameEl.textContent = place.name;
   modalSearchInput.value = "";
   modalSearchResults.innerHTML = "";
-  locationModal.hidden = false;
+  placeModal.hidden = false;
 
   if (!modalMap) {
     modalMap = L.map("modal-map");
@@ -854,12 +884,12 @@ function openLocationModal(place) {
   setTimeout(() => modalMap.invalidateSize(), 50);
 }
 
-function closeLocationModal() {
-  locationModal.hidden = true;
+function closePlaceModal() {
+  placeModal.hidden = true;
   modalPlaceId = null;
 }
 
-modalCancelBtn.addEventListener("click", closeLocationModal);
+modalCancelBtn.addEventListener("click", closePlaceModal);
 
 modalClearBtn.addEventListener("click", () => {
   modalLocation = null;
@@ -869,15 +899,33 @@ modalClearBtn.addEventListener("click", () => {
   }
 });
 
-modalSaveBtn.addEventListener("click", () => {
+modalForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const categories = modalCategoryDropdown.value;
+  if (categories.length === 0) {
+    modalCategoryDropdown.el.classList.add("invalid");
+    modalCategoryDropdown.el.querySelector(".dropdown-toggle").focus();
+    return;
+  }
+
+  const name = modalNameInput.value.trim();
+  const suburb = modalSuburbInput.value.trim();
+  if (!name || !suburb) return;
+
   const place = places.find((p) => p.id === modalPlaceId);
   if (place) {
+    place.name = name;
+    place.suburb = suburb;
+    place.categories = categories;
+    place.notes = modalNotesInput.value.trim();
     place.lat = modalLocation ? modalLocation.lat : null;
     place.lng = modalLocation ? modalLocation.lng : null;
     savePlaces(places);
+    refreshSuburbControls();
     render();
   }
-  closeLocationModal();
+  closePlaceModal();
 });
 
 // --- Map: browse view showing pins for the currently filtered places ---
