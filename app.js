@@ -92,6 +92,7 @@ const suburbInput = document.getElementById("place-suburb");
 const suburbSuggestionsEl = document.getElementById("place-suburb-suggestions");
 const notesInput = document.getElementById("place-notes");
 
+const searchInput = document.getElementById("search-input");
 const placesListEl = document.getElementById("places-list");
 const placesCountEl = document.getElementById("places-count");
 
@@ -406,6 +407,8 @@ const sortDropdown = createDropdown({
   onChange: render,
 });
 
+searchInput.addEventListener("input", render);
+
 function populateCategoryOptions() {
   const categoryOptions = CATEGORIES.map((category) => ({ value: category, label: category }));
   categoryDropdown.setOptions(categoryOptions);
@@ -443,10 +446,16 @@ function refreshSuburbControls() {
 function getFilteredPlaces() {
   const suburbFilter = filterSuburbDropdown.value;
   const categoryFilter = filterCategoryDropdown.value;
+  const searchQuery = searchInput.value.trim().toLowerCase();
 
   const filtered = places
     .filter((p) => !suburbFilter || p.suburb === suburbFilter)
-    .filter((p) => !categoryFilter || p.categories.includes(categoryFilter));
+    .filter((p) => !categoryFilter || p.categories.includes(categoryFilter))
+    .filter((p) => {
+      if (!searchQuery) return true;
+      const haystack = [p.name, p.suburb, p.notes, ...p.categories].join(" ").toLowerCase();
+      return haystack.includes(searchQuery);
+    });
 
   switch (sortDropdown.value) {
     case "name":

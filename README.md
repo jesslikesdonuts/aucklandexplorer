@@ -64,9 +64,12 @@ npx serve
   Activities), but a place can have more than one — tick as many as apply in the
   Category dropdown. Filtering by a category matches any place that has it, even if
   it also has others.
+- The **Search** box under "Browse places" matches against a place's name, suburb,
+  category, and notes as you type — handy for finding a place when you don't remember
+  which suburb or category you filed it under.
 - Use the Suburb and Category dropdowns under "Browse places" to filter the list, and
   the Sort by dropdown to order it — by Suburb, Name, Category, or Newest first (most
-  recently added first).
+  recently added first). Search and the filters all combine together.
 - Each place has a **Delete** button if you want to remove it.
 - Click anywhere else on a place (its name, tags, or notes) to open its details in a
   popup, where you can edit anything about it — name, suburb, categories, notes, or
