@@ -62,12 +62,9 @@ function addTileLayer(map) {
 const form = document.getElementById("place-form");
 const nameInput = document.getElementById("place-name");
 const suburbInput = document.getElementById("place-suburb");
-const categorySelect = document.getElementById("place-category");
+const suburbSuggestionsEl = document.getElementById("place-suburb-suggestions");
 const notesInput = document.getElementById("place-notes");
-const suburbSuggestions = document.getElementById("suburb-suggestions");
 
-const filterSuburbSelect = document.getElementById("filter-suburb");
-const filterCategorySelect = document.getElementById("filter-category");
 const placesListEl = document.getElementById("places-list");
 const placesCountEl = document.getElementById("places-count");
 
@@ -79,47 +76,127 @@ const mapUnpinnedNoteEl = document.getElementById("map-unpinned-note");
 
 let currentView = "list";
 
-function populateCategoryOptions() {
-  for (const category of CATEGORIES) {
-    const formOption = document.createElement("option");
-    formOption.value = category;
-    formOption.textContent = category;
-    categorySelect.appendChild(formOption);
+// --- Custom dropdown component ---
+// Replaces native <select> so the open menu can be styled to match the
+// site, instead of looking like the browser's own select/autofill UI.
 
-    const filterOption = document.createElement("option");
-    filterOption.value = category;
-    filterOption.textContent = category;
-    filterCategorySelect.appendChild(filterOption);
+const openDropdowns = new Set();
+
+document.addEventListener("click", (event) => {
+  for (const dropdown of openDropdowns) {
+    if (!dropdown.el.contains(event.target)) dropdown.close();
   }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    for (const dropdown of openDropdowns) dropdown.close();
+  }
+});
+
+function createDropdown({ containerEl, onChange }) {
+  const toggleEl = containerEl.querySelector(".dropdown-toggle");
+  const labelEl = toggleEl.querySelector(".dropdown-toggle-label");
+  const menuEl = containerEl.querySelector(".dropdown-menu");
+  let currentValue = null;
+  let labels = new Map();
+
+  const dropdown = {
+    el: containerEl,
+    open() {
+      menuEl.hidden = false;
+      containerEl.classList.add("open");
+      toggleEl.setAttribute("aria-expanded", "true");
+      openDropdowns.add(dropdown);
+    },
+    close() {
+      menuEl.hidden = true;
+      containerEl.classList.remove("open");
+      toggleEl.setAttribute("aria-expanded", "false");
+      openDropdowns.delete(dropdown);
+    },
+    setOptions(options) {
+      labels = new Map(options.map((option) => [option.value, option.label]));
+      menuEl.innerHTML = "";
+      for (const option of options) {
+        const item = document.createElement("li");
+        item.textContent = option.label;
+        item.setAttribute("role", "option");
+        item.dataset.value = option.value;
+        if (option.value === currentValue) item.classList.add("active");
+        item.addEventListener("click", () => dropdown.select(option.value));
+        menuEl.appendChild(item);
+      }
+    },
+    select(value, { silent = false } = {}) {
+      currentValue = value;
+      if (labels.has(value)) labelEl.textContent = labels.get(value);
+      for (const item of menuEl.children) {
+        item.classList.toggle("active", item.dataset.value === value);
+      }
+      dropdown.close();
+      if (!silent) onChange(value);
+    },
+    reset(placeholderText) {
+      currentValue = null;
+      labelEl.textContent = placeholderText;
+      for (const item of menuEl.children) item.classList.remove("active");
+    },
+    get value() {
+      return currentValue;
+    },
+  };
+
+  toggleEl.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (menuEl.hidden) dropdown.open();
+    else dropdown.close();
+  });
+
+  return dropdown;
+}
+
+const categoryDropdown = createDropdown({
+  containerEl: document.getElementById("place-category-dropdown"),
+  onChange: () => categoryDropdown.el.classList.remove("invalid"),
+});
+
+const filterSuburbDropdown = createDropdown({
+  containerEl: document.getElementById("filter-suburb-dropdown"),
+  onChange: render,
+});
+
+const filterCategoryDropdown = createDropdown({
+  containerEl: document.getElementById("filter-category-dropdown"),
+  onChange: render,
+});
+
+function populateCategoryOptions() {
+  const categoryOptions = CATEGORIES.map((category) => ({ value: category, label: category }));
+  categoryDropdown.setOptions(categoryOptions);
+  filterCategoryDropdown.setOptions([{ value: "", label: "All categories" }, ...categoryOptions]);
+  filterCategoryDropdown.select("", { silent: true });
 }
 
 function refreshSuburbControls() {
   const suburbs = getSuburbs();
-  const previousFilterValue = filterSuburbSelect.value;
+  const previousFilterValue = filterSuburbDropdown.value;
 
-  suburbSuggestions.innerHTML = "";
-  for (const suburb of suburbs) {
-    const option = document.createElement("option");
-    option.value = suburb;
-    suburbSuggestions.appendChild(option);
-  }
+  filterSuburbDropdown.setOptions([
+    { value: "", label: "All suburbs" },
+    ...suburbs.map((suburb) => ({ value: suburb, label: suburb })),
+  ]);
 
-  filterSuburbSelect.innerHTML = '<option value="">All suburbs</option>';
-  for (const suburb of suburbs) {
-    const option = document.createElement("option");
-    option.value = suburb;
-    option.textContent = suburb;
-    filterSuburbSelect.appendChild(option);
-  }
-
-  if (suburbs.includes(previousFilterValue)) {
-    filterSuburbSelect.value = previousFilterValue;
+  if (previousFilterValue && suburbs.includes(previousFilterValue)) {
+    filterSuburbDropdown.select(previousFilterValue, { silent: true });
+  } else {
+    filterSuburbDropdown.select("", { silent: true });
   }
 }
 
 function getFilteredPlaces() {
-  const suburbFilter = filterSuburbSelect.value;
-  const categoryFilter = filterCategorySelect.value;
+  const suburbFilter = filterSuburbDropdown.value;
+  const categoryFilter = filterCategoryDropdown.value;
 
   return places
     .filter((p) => !suburbFilter || p.suburb === suburbFilter)
@@ -220,29 +297,77 @@ function deletePlace(id) {
 form.addEventListener("submit", (event) => {
   event.preventDefault();
 
+  const category = categoryDropdown.value;
+  if (!category) {
+    categoryDropdown.el.classList.add("invalid");
+    categoryDropdown.el.querySelector(".dropdown-toggle").focus();
+    return;
+  }
+
   const newPlace = {
     id: makeId(),
     name: nameInput.value.trim(),
     suburb: suburbInput.value.trim(),
-    category: categorySelect.value,
+    category,
     notes: notesInput.value.trim(),
     lat: addPlacePendingLocation ? addPlacePendingLocation.lat : null,
     lng: addPlacePendingLocation ? addPlacePendingLocation.lng : null,
   };
 
-  if (!newPlace.name || !newPlace.suburb || !newPlace.category) return;
+  if (!newPlace.name || !newPlace.suburb) return;
 
   places.push(newPlace);
   savePlaces(places);
 
   form.reset();
+  categoryDropdown.reset("Choose a category");
+  suburbSuggestionsEl.hidden = true;
   clearAddPlacePin();
   refreshSuburbControls();
   render();
 });
 
-filterSuburbSelect.addEventListener("change", render);
-filterCategorySelect.addEventListener("change", render);
+// --- Suburb autocomplete, replacing the native <datalist> ---
+// (suggestions are computed live from suburbs already in use, so there's
+// no separate list to keep in sync)
+
+function updateSuburbSuggestions() {
+  const query = suburbInput.value.trim().toLowerCase();
+  suburbSuggestionsEl.innerHTML = "";
+
+  if (!query) {
+    suburbSuggestionsEl.hidden = true;
+    return;
+  }
+
+  const matches = getSuburbs().filter((suburb) => suburb.toLowerCase().includes(query));
+  if (matches.length === 0) {
+    suburbSuggestionsEl.hidden = true;
+    return;
+  }
+
+  for (const suburb of matches) {
+    const item = document.createElement("li");
+    item.textContent = suburb;
+    item.setAttribute("role", "option");
+    // mousedown (rather than click) fires before the input blurs, so we
+    // can fill the value in without the suggestions list disappearing first
+    item.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      suburbInput.value = suburb;
+      suburbSuggestionsEl.hidden = true;
+    });
+    suburbSuggestionsEl.appendChild(item);
+  }
+
+  suburbSuggestionsEl.hidden = false;
+}
+
+suburbInput.addEventListener("input", updateSuburbSuggestions);
+suburbInput.addEventListener("focus", updateSuburbSuggestions);
+suburbInput.addEventListener("blur", () => {
+  suburbSuggestionsEl.hidden = true;
+});
 
 viewListBtn.addEventListener("click", () => setView("list"));
 viewMapBtn.addEventListener("click", () => setView("map"));

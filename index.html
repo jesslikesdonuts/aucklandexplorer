@@ -26,15 +26,21 @@
 
         <div class="form-row">
           <label for="place-suburb">Suburb <span class="required">*</span></label>
-          <input type="text" id="place-suburb" list="suburb-suggestions" placeholder="e.g. Ponsonby" required />
-          <datalist id="suburb-suggestions"></datalist>
+          <div class="autocomplete">
+            <input type="text" id="place-suburb" placeholder="e.g. Ponsonby" autocomplete="off" required />
+            <ul id="place-suburb-suggestions" class="dropdown-menu" role="listbox" hidden></ul>
+          </div>
         </div>
 
         <div class="form-row">
-          <label for="place-category">Category <span class="required">*</span></label>
-          <select id="place-category" required>
-            <option value="" disabled selected>Choose a category</option>
-          </select>
+          <label id="place-category-label">Category <span class="required">*</span></label>
+          <div class="dropdown" id="place-category-dropdown">
+            <button type="button" class="dropdown-toggle" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="place-category-label">
+              <span class="dropdown-toggle-label">Choose a category</span>
+              <span class="dropdown-chevron" aria-hidden="true"></span>
+            </button>
+            <ul class="dropdown-menu" role="listbox" hidden></ul>
+          </div>
         </div>
 
         <div class="form-row">
@@ -61,16 +67,24 @@
       <h2>Browse places</h2>
       <div class="filters">
         <div class="form-row">
-          <label for="filter-suburb">Suburb</label>
-          <select id="filter-suburb">
-            <option value="">All suburbs</option>
-          </select>
+          <label id="filter-suburb-label">Suburb</label>
+          <div class="dropdown" id="filter-suburb-dropdown">
+            <button type="button" class="dropdown-toggle" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="filter-suburb-label">
+              <span class="dropdown-toggle-label">All suburbs</span>
+              <span class="dropdown-chevron" aria-hidden="true"></span>
+            </button>
+            <ul class="dropdown-menu" role="listbox" hidden></ul>
+          </div>
         </div>
         <div class="form-row">
-          <label for="filter-category">Category</label>
-          <select id="filter-category">
-            <option value="">All categories</option>
-          </select>
+          <label id="filter-category-label">Category</label>
+          <div class="dropdown" id="filter-category-dropdown">
+            <button type="button" class="dropdown-toggle" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="filter-category-label">
+              <span class="dropdown-toggle-label">All categories</span>
+              <span class="dropdown-chevron" aria-hidden="true"></span>
+            </button>
+            <ul class="dropdown-menu" role="listbox" hidden></ul>
+          </div>
         </div>
       </div>
 
