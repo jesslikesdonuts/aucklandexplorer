@@ -721,10 +721,42 @@ async function geocodeSearch(query) {
     limit: "5",
     viewbox: AUCKLAND_VIEWBOX,
     countrycodes: "nz",
+    // Gets a structured `address` object (and often a `name`) back for
+    // each result, so a selected result can prefill the Name/Suburb
+    // fields rather than only dropping a pin.
+    addressdetails: "1",
   });
   const response = await fetch(`https://nominatim.openstreetmap.org/search?${params}`);
   if (!response.ok) throw new Error("Search request failed");
   return response.json();
+}
+
+// Best-effort guesses only — Nominatim's data is volunteer-mapped and
+// uneven, so these can come back empty or occasionally off. Fields are
+// only ever filled in when the user hasn't already typed something there.
+function guessNameFromResult(result) {
+  if (result.name) return result.name;
+  const firstSegment = result.display_name.split(",")[0].trim();
+  // A plain street address's first segment starts with a house number
+  // (e.g. "123 Some Street"); a named place's first segment is its own
+  // name, so this is a reasonable way to tell the two apart.
+  return /^\d/.test(firstSegment) ? null : firstSegment;
+}
+
+function guessSuburbFromResult(result) {
+  const address = result.address || {};
+  return address.suburb || address.city_district || address.neighbourhood || address.town || address.village || address.city || null;
+}
+
+function autofillFromSearchResult(result, nameInputEl, suburbInputEl) {
+  if (!nameInputEl.value.trim()) {
+    const name = guessNameFromResult(result);
+    if (name) nameInputEl.value = name;
+  }
+  if (!suburbInputEl.value.trim()) {
+    const suburb = guessSuburbFromResult(result);
+    if (suburb) suburbInputEl.value = suburb;
+  }
 }
 
 function setStatusMessage(resultsEl, message) {
@@ -770,7 +802,7 @@ function setupLocationSearch({ inputEl, buttonEl, resultsEl, onSelect }) {
       const item = document.createElement("li");
       item.textContent = result.display_name;
       item.addEventListener("click", () => {
-        onSelect(Number(result.lat), Number(result.lon));
+        onSelect(Number(result.lat), Number(result.lon), result);
         resultsEl.innerHTML = "";
       });
       resultsEl.appendChild(item);
@@ -805,10 +837,11 @@ setupLocationSearch({
   inputEl: document.getElementById("add-place-search-input"),
   buttonEl: document.getElementById("add-place-search-btn"),
   resultsEl: document.getElementById("add-place-search-results"),
-  onSelect: (lat, lng) => {
+  onSelect: (lat, lng, result) => {
     addPlacePendingLocation = { lat, lng };
     addPlaceMap.setView([lat, lng], 16);
     setMarker(addPlaceMap, addPlaceMarker, addPlacePendingLocation, (marker) => (addPlaceMarker = marker));
+    autofillFromSearchResult(result, nameInput, suburbInput);
   },
 });
 
@@ -854,10 +887,13 @@ setupLocationSearch({
   inputEl: modalSearchInput,
   buttonEl: document.getElementById("modal-search-btn"),
   resultsEl: modalSearchResults,
-  onSelect: (lat, lng) => {
+  onSelect: (lat, lng, result) => {
     modalLocation = { lat, lng };
     modalMap.setView([lat, lng], 16);
     setMarker(modalMap, modalMarker, modalLocation, (marker) => (modalMarker = marker));
+    // Only fills in Name/Suburb when they're empty, so re-pinning an
+    // existing place (which always already has both) never overwrites them.
+    autofillFromSearchResult(result, modalNameInput, modalSuburbInput);
   },
 });
 

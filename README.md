@@ -80,6 +80,10 @@ npx serve
   into the search box above the map and pick a result to jump the map there and drop
   a pin — or just click the map yourself if you'd rather. This is optional — a place
   without a pin still saves and shows up in the list, it just won't appear on the map.
+- If you search a business by name (rather than a bare address) and it's mapped as a
+  named place in OpenStreetMap, picking that result also fills in the Name and Suburb
+  fields for you — only when they're still empty, so it never overwrites anything
+  you've already typed (or, when editing a place, its existing name/suburb).
 - Click **Map** (next to **List**, above the places) to see a map with a pin for every
   place that has one, respecting whatever suburb/category filters are active. Click a
   pin to see that place's details. Pins are colored by category (a place with more
