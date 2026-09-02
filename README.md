@@ -54,8 +54,10 @@ npx serve
 
 ## Using the app
 
-- Fill in the "Add a new place" form (name, suburb, category, optional notes) and
-  click **Add place**.
+- Fill in the "Add a new place" form (location, name, suburb, category, optional
+  notes) and click **Add place**. Location comes first since searching for the place
+  can fill in its name and suburb for you (see below) — search or click the map, then
+  fill in whatever wasn't already filled in.
 - Suburbs aren't a fixed list you manage separately — they're just whatever you type
   in the Suburb field. As you add places, the Suburb filter dropdown fills in
   automatically with the suburbs you've used, and you'll get autocomplete suggestions
