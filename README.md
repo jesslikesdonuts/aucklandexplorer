@@ -82,6 +82,8 @@ npx serve
   into the search box above the map and pick a result to jump the map there and drop
   a pin — or just click the map yourself if you'd rather. This is optional — a place
   without a pin still saves and shows up in the list, it just won't appear on the map.
+  In the List view, a place with no pin gets a "📍 No location set" tag so it's easy
+  to spot which ones to fix.
 - If you search a business by name (rather than a bare address) and it's mapped as a
   named place in OpenStreetMap, picking that result also fills in the Name and Suburb
   fields for you — only when they're still empty, so it never overwrites anything

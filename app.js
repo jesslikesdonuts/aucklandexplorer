@@ -520,6 +520,12 @@ function buildPlaceCard(place) {
   for (const category of place.categories) {
     tags.appendChild(makeTag(category));
   }
+  if (!hasLocation(place)) {
+    const missingTag = document.createElement("span");
+    missingTag.className = "tag tag-no-location";
+    missingTag.textContent = "📍 No location set";
+    tags.appendChild(missingTag);
+  }
   info.appendChild(tags);
 
   if (place.notes) {
